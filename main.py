@@ -17,7 +17,7 @@ def start(bot, update):
 
 
 def new_song(bot, update):
-    with open('00001.mp3') as mp3_file:
+    with open('00001.mp3', 'rb') as mp3_file:
         update.message.reply_audio(mp3_file)
 
 
