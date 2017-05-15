@@ -101,3 +101,4 @@ ENV/
 .mypy_cache/
 token.txt
 .mp3
+*.mp3
