@@ -34,7 +34,7 @@ def get_one_song():
 
 def get_random_choices():
     choices = []
-    while len(choices) < 6:
+    while len(choices) < 2:
         skip = random.randint(0, get_song_total_number()-1)
         result = song_base.find()[skip]
         song = result['tags']['TITLE']
