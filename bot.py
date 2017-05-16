@@ -72,7 +72,7 @@ def  setup_handler(dp):
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('new_game', new_game))
     dp.add_handler(CommandHandler('test', test_send_song))
-    dp.add_handler(MessageHandler(try_one_guess))
+    dp.add_handler(MessageHandler(Filters.tex, try_one_guess))
 
 
 def main():
