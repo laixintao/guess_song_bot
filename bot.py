@@ -51,28 +51,31 @@ def test_send_song(bot, update):
 
 def try_one_guess(bot, update):
     logger.info(update.message)
-    if not GAME_RUNNING:
-        update.message.reply_text(messages.game_not_running)
-        return
+    logger.info("New try: {}, from: {}".format(update.message.text, update.message.from_user))
     answer = update.message.text
     user = update.message.from_user
     if user in tried_users:
+        logger.info("User has tried.")
         update.message.reply_text(messages.you_are_tried.format(user))
         return
+    logger.info("new try.")
     tried_users.append(user)
     if answer == game_info['answer']['title']:
+        logger.info("right.")
         update.message.reply_text(messages.answer_right.format(user))
     else:
+        logger.info("wrong.")
         update.message.reply_text(messages.answer_wrong.format(user))
         GAME_RUNNING = False
+    logger.info("down")
 
 
 
-def  setup_handler(dp):
+def setup_handler(dp):
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('new_game', new_game))
     dp.add_handler(CommandHandler('test', test_send_song))
-    dp.add_handler(MessageHandler(Filters.tex, try_one_guess))
+    dp.add_handler(MessageHandler(Filters.text, try_one_guess))
 
 
 def main():
