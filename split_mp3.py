@@ -25,7 +25,7 @@ song_base = mongo_client['guess_song']['song']
 def check_song_in_database(filename):
     basename = os.path.basename(filename)
     result = song_base.find({'filename': basename})
-    if not result:
+    if result.count > 0:
         return False
     return True
 
