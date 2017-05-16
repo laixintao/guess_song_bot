@@ -12,19 +12,37 @@ import messages
 
 GAME_RUNNING = False
 logger = logging.getLogger(__name__)
+message_base = mongo['telegram']['messages']
 
+game_info = {
+        'db': 6,
+        'choices': [],
+        'answer': {}
+        }
 
 def start(bot, update):
     logger.info(update.message)
-    update.reply_text(messages.start_message)
+    update.message.reply_text(messages.start_message)
 
 
 def new_game(bot, update):
-    pass
+    GAME_RUNNING = True
+    logger.info(update.message)
+    new_song = get_one_song()
+    game_info['answer'] = new_song
+    game_info['choices'] = get_choices()
+    game_info['choices'].append(:wq
+
+    update.message.reply_text(messages.new_game)
 
 
 def try_one_guess(bot, update):
     pass
+
+
+def setup_handler(dp):
+    dp.add_handler(CommandHandler('start', start))
+    dp.add_handler(CommandHandler('new_game', new_game))
 
 
 def main():
@@ -33,6 +51,5 @@ def main():
     updater = Updater(token)
 
     dp = updater.dispatcher
-    dp.add_handler(CommandHandler('start', start))
     updater.start_polling()
     updater.idle()
