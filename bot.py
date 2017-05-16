@@ -38,18 +38,23 @@ def new_game(bot, update):
                               reply_markup=ReplyKeyboardMarkup(game_info['choices'],
                                                                on_time_keyboard=True))
     with open(new_song['piece_path'], 'rb') as piece_file:
+    # with open('sounds/11_minute_song.mp3', 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
         update.message.reply_audio(piece_file)
 
 
+def test_send_song(bot, update):
+    with open('11_minute_song.mp3', 'rb') as file:
+        update.message.reply_audio(file)
 
 def try_one_guess(bot, update):
     pass
 
 
-def setup_handler(dp):
+def  setup_handler(dp):
     dp.add_handler(CommandHandler('start', start))
     dp.add_handler(CommandHandler('new_game', new_game))
+    dp.add_handler(CommandHandler('test', test_send_song))
 
 
 def main():
