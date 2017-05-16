@@ -1,6 +1,7 @@
 # coding: utf-8
 # pylint: disable=missing-docstring, unused-import, import-error,
 # pylint: disable=invalid-name, logging-format-interpolation, unused-argument
+# pylint: disable=redefined-outer-name, unused-variable
 import logging
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
@@ -8,17 +9,18 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 import pymongo
 import config_log
 import messages
+from song import get_random_choices, get_one_song
 
 
 GAME_RUNNING = False
 logger = logging.getLogger(__name__)
+mongo = pymongo.MongoClient()
 message_base = mongo['telegram']['messages']
 
 game_info = {
-        'db': 6,
-        'choices': [],
-        'answer': {}
-        }
+    'db': 6,
+    'choices': [],
+    'answer': {}}
 
 def start(bot, update):
     logger.info(update.message)
@@ -30,10 +32,15 @@ def new_game(bot, update):
     logger.info(update.message)
     new_song = get_one_song()
     game_info['answer'] = new_song
-    game_info['choices'] = get_choices()
-    game_info['choices'].append(:wq
+    game_info['choices'] = get_random_choices()
+    game_info['choices'].append(new_song['title'])
+    update.message.reply_text(messages.new_game,
+                              reply_markup=ReplyKeyboardMarkup(game_info['choices'],
+                                                               on_time_keyboard=True))
+    with open(new_song['piece_path'], 'rb') as piece_file:
+        logger.debug("Sending song piece: {}".format(new_song['piece_path']))
+        update.message.reply_audio(piece_file)
 
-    update.message.reply_text(messages.new_game)
 
 
 def try_one_guess(bot, update):
@@ -51,5 +58,6 @@ def main():
     updater = Updater(token)
 
     dp = updater.dispatcher
+    setup_handler(dp)
     updater.start_polling()
     updater.idle()
