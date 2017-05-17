@@ -40,6 +40,7 @@ def get_random_choices(right_answer):
         song = result['tags']['TITLE']
         if song not in choices:
             choices.append(song)
+    logger.info(choices)
     return choices
 
 if __name__ == '__main__':

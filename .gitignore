@@ -102,3 +102,4 @@ ENV/
 token.txt
 .mp3
 *.mp3
+*.swp
