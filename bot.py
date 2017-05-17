@@ -5,7 +5,8 @@
 from __future__ import unicode_literals
 import logging
 import json
-from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
+import random
+from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove, Chat)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
 import config_log
@@ -22,8 +23,6 @@ TRIED_USERS_KEY = 'guess_song_bot:bot:chat-{}:tried_users'
 GAME_INFO_KEY = 'guess_song_bot:bot:chat-{}:game_info'
 
 
-
-
 def game_is_running(chat_id):
     return redis.get(GAME_RUNNING_KEY.format(chat_id))
 
@@ -31,9 +30,14 @@ def set_game_running(chat_id):
     redis.set(GAME_RUNNING_KEY.format(chat_id), True)
 
 
-def game_over(chat_id):
-    redis.set(GAME_RUNNING_KEY, False)
-    redis.delete(TRIED_USERS_KEY.format(chat_id))
+def game_over(chat_id, update, game_info, win):
+    try:
+        redis.set(GAME_RUNNING_KEY, False)
+        redis.delete(TRIED_USERS_KEY.format(chat_id))
+        if not win:
+            update.message.reply_text("Right answer:{title}, {artise}, {album}.".format(**game_info['answer']))
+    except Exception as e:
+        logger.info(e)
 
 def start(bot, update):
     logger.info(update.message)
@@ -45,16 +49,20 @@ def new_game(bot, update):
     set_game_running(chat_id)
     logger.info(update.message)
     new_song = get_one_song()
-    game_info = {
-        'chat_id': chat_id,
-        'db': 6,
-        'type': update.message.type,
-        'choices': get_random_choices(new_song['title']),
-        'answer': new_song}
+    try:
+        game_info = {
+            'chat_id': chat_id,
+            'db': 6,
+            'type': update.message.chat.type,
+            'choices': get_random_choices(new_song['title']),
+            'answer': new_song}
+        logger.debug(game_info)
+    except Exception as e:
+        logger.debug(e)
     redis.set(GAME_INFO_KEY.format(chat_id), json.dumps(game_info))
     logger.debug("Set {} to {}".format(GAME_INFO_KEY.format(chat_id), game_info))
     update.message.reply_text(messages.new_game,
-                              reply_markup=ReplyKeyboardMarkup(game_info['choices'],
+                              reply_markup=ReplyKeyboardMarkup(random.shuffle(game_info['choices']),
                                                                on_time_keyboard=True))
     with open(new_song['piece_path'], 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
@@ -72,25 +80,31 @@ def get_tried_users(chat_id):
 
 
 def try_one_guess(bot, update):
-    logger.info(update.message)
-    chat_id = update.message.chat_id
-    user_first_name = update.message.from_user.first_name
-    logger.info("New try: {}, from: {}".format(update.message.text, user_first_name))
-    if not game_is_running(chat_id):
-        update.message.reply_text(messages.game_not_running)
-    answer = update.message.text
-    user = update.message.from_user
-    if user.id in get_tried_users(chat_id):
-        update.message.reply_text(messages.you_are_tried.format(user_first_name))
-        return
-    redis.lpush(TRIED_USERS_KEY.format(chat_id), user.id)
-    game_info = json.loads(redis.get(GAME_INFO_KEY.format(chat_id)))
-    if answer == game_info['answer']['title']:
-        update.message.reply_text(messages.answer_right.format(user_first_name))
-    else:
-        update.message.reply_text(messages.answer_wrong.format(user_first_name))
-        game_over(chat_id)
-    logger.debug('try one guess done!')
+    try:
+        logger.info(update.message)
+        chat_id = update.message.chat_id
+        user_first_name = update.message.from_user.first_name
+        logger.info("New try: {}, from: {}".format(update.message.text, user_first_name))
+        if not game_is_running(chat_id):
+            update.message.reply_text(messages.game_not_running)
+        answer = update.message.text
+        user = update.message.from_user
+        if user.id in get_tried_users(chat_id):
+            update.message.reply_text(messages.you_are_tried.format(user_first_name))
+            return
+        redis.lpush(TRIED_USERS_KEY.format(chat_id), user.id)
+        game_info = json.loads(redis.get(GAME_INFO_KEY.format(chat_id)).decode('utf-8'))
+        if answer == game_info['answer']['title'][0]:
+            update.message.reply_text(messages.answer_right.format(user_first_name),
+                    reply_markup=ReplyKeyboardRemove())
+            game_over(chat_id, update, game_info, True)
+        else:
+            update.message.reply_text(messages.answer_wrong.format(user_first_name))
+            if game_info['type'] == Chat.PRIVATE:
+                gave_over(chat_id, update, game_info, False)
+        logger.debug('try one guess done!')
+    except Exception as e:
+        logger.warning(e)
 
 
 def setup_handler(dp):
