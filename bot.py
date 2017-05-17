@@ -16,25 +16,23 @@ from utils import redis_instance as redis
 
 logger = logging.getLogger(__name__)
 message_base = mongo['telegram']['messages']
-GAME_RUNNING_KEY = 'guess_song_bot:bot:game_is_running'
-TRIED_USERS_KEY = 'guess_song_bot:bot:tried_users'
+GAME_RUNNING_KEY = 'guess_song_bot:bot:chat-{}:game_is_running'
+TRIED_USERS_KEY = 'guess_song_bot:bot:chat-{}:tried_users'
+GAME_INFO_KEY = 'guess_song_bot:bot:chat-{}:game_info'
 
 
-game_info = {
-    'db': 6,
-    'choices': [],
-    'answer': {}}
 
 
-def game_is_running():
-    return redis.get(GAME_RUNNING_KEY)
+def game_is_running(chat_id):
+    return redis.get(GAME_RUNNING_KEY.format(chat_id))
 
-def set_game_running():
-    redis.set(GAME_RUNNING_KEY, True)
+def set_game_running(chat_id):
+    redis.set(GAME_RUNNING_KEY.format(chat_id), True)
 
 
-def game_over():
+def game_over(chat_id):
     redis.set(GAME_RUNNING_KEY, False)
+    redis.delete(TRIED_USERS_KEY.format(chat_id))
 
 def start(bot, update):
     logger.info(update.message)
@@ -42,12 +40,17 @@ def start(bot, update):
 
 
 def new_game(bot, update):
-    set_game_running()
+    chat_id = update.message.chat_id
+    set_game_running(chat_id)
     logger.info(update.message)
-    tried_users = []
     new_song = get_one_song()
-    game_info['answer'] = new_song
-    game_info['choices'] = get_random_choices(new_song['title'])
+    game_info = {
+        'chat_id': chat_id,
+        'db': 6,
+        'type': update.message.type,
+        'choices': get_random_choices(new_song['title']),
+        'answer': new_song}
+    redis.set(GAME_INFO_KEY.format(chat_id), game_info)
     update.message.reply_text(messages.new_game,
                               reply_markup=ReplyKeyboardMarkup(game_info['choices'],
                                                                on_time_keyboard=True))
@@ -60,28 +63,31 @@ def test_send_song(bot, update):
     pass
 
 
-def get_tried_users():
+def get_tried_users(chat_id):
     "return tried user_id"
-    users = redis.lrange(TRIED_USERS_KEY, 0, -1)
+    users = redis.lrange(TRIED_USERS_KEY.format(chat_id), 0, -1)
     return [int(uid) for uid in users]
+
 
 def try_one_guess(bot, update):
     logger.info(update.message)
+    chat_id = update.message.chat_id
     user_first_name = update.message.from_user.first_name
-    logger.info("New try: {}, from: {}".format(update.message.text, update.message.from_user.first_name))
-    if not game_is_running():
+    logger.info("New try: {}, from: {}".format(update.message.text, user_first_name))
+    if not game_is_running(chat_id):
         update.message.reply_text(messages.game_not_running)
     answer = update.message.text
     user = update.message.from_user
-    if user.id in get_tried_users():
+    if user.id in get_tried_users(chat_id):
         update.message.reply_text(messages.you_are_tried.format(user_first_name))
         return
-    redis.lpush(TRIED_USERS_KEY, user.id)
+    redis.lpush(TRIED_USERS_KEY.format(chat_id), user.id)
     if answer == game_info['answer']['title']:
         update.message.reply_text(messages.answer_right.format(user_first_name))
     else:
         update.message.reply_text(messages.answer_wrong.format(user_first_name))
-        game_over()
+        game_over(chat_id)
+    logger.debug('try one guess done!')
 
 
 def setup_handler(dp):
