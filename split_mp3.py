@@ -50,7 +50,9 @@ def parse_mp3(mp3_filename):
         pieces_filename.append(out_filename)
     song_info['pieces'] = pieces_filename
     song_info['created_at'] = time.time()
-    song_base.update(song_info, song_info, upsert=True)
+    song_base.update({'tags.TITLE': song_info['tags']['TITLE']},
+                     song_info,
+                     upsert=True)
 
 
 def get_all_mp3_files():
