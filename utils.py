@@ -2,7 +2,12 @@
 
 import redis
 import pymongo
+from functools import wraps
+import config_log
+import logging
 
+
+logger = logging.getLogger(__name__)
 
 def get_redis():
     """return a redis instance"""
@@ -17,3 +22,12 @@ def get_mongo():
 
 redis_instance = get_redis()
 mongo = get_mongo()
+
+def log_exception(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            logger.warn(e)
+    return wrapper
