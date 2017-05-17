@@ -14,7 +14,7 @@ import taglib
 import config_log
 import pymongo
 
-LENGTH_PER_PIECE = 30*1000
+LENGTH_PER_PIECE = 10*1000
 MP3_FILE_PATH = 'mp3/'
 EXPORT_PIECES_PATH = os.getcwd() + '/sounds/'
 
