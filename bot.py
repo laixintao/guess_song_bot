@@ -4,6 +4,7 @@
 # pylint: disable=redefined-outer-name, unused-variable
 from __future__ import unicode_literals
 import logging
+import json
 from telegram import (ReplyKeyboardMarkup, ReplyKeyboardRemove)
 from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, RegexHandler,
                           ConversationHandler)
@@ -50,7 +51,8 @@ def new_game(bot, update):
         'type': update.message.type,
         'choices': get_random_choices(new_song['title']),
         'answer': new_song}
-    redis.set(GAME_INFO_KEY.format(chat_id), game_info)
+    redis.set(GAME_INFO_KEY.format(chat_id), json.dumps(game_info))
+    logger.debug("Set {} to {}".format(GAME_INFO_KEY.format(chat_id), game_info))
     update.message.reply_text(messages.new_game,
                               reply_markup=ReplyKeyboardMarkup(game_info['choices'],
                                                                on_time_keyboard=True))
@@ -82,6 +84,7 @@ def try_one_guess(bot, update):
         update.message.reply_text(messages.you_are_tried.format(user_first_name))
         return
     redis.lpush(TRIED_USERS_KEY.format(chat_id), user.id)
+    game_info = json.loads(redis.get(GAME_INFO_KEY.format(chat_id)))
     if answer == game_info['answer']['title']:
         update.message.reply_text(messages.answer_right.format(user_first_name))
     else:
