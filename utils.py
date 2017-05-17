@@ -1,10 +1,11 @@
 # coding:utf-8
 
+import logging
+import traceback
+from functools import wraps
 import redis
 import pymongo
-from functools import wraps
 import config_log
-import logging
 
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,6 @@ def log_exception(func):
     def wrapper(*args, **kwargs):
         try:
             func(*args, **kwargs)
-        except Exception as e:
-            logger.warn(e)
+        except:
+            traceback.print_stack()
     return wrapper

@@ -24,7 +24,7 @@ GAME_INFO_KEY = 'guess_song_bot:bot:chat-{}:game_info'
 
 
 def game_is_running(chat_id):
-    return redis.get(GAME_RUNNING_KEY.format(chat_id))
+    return redis.get(GAME_RUNNING_KEY.format(chat_id)) == b'True'
 
 def set_game_running(chat_id):
     redis.set(GAME_RUNNING_KEY.format(chat_id), True)
@@ -34,10 +34,16 @@ def set_game_running(chat_id):
 @log_exception
 def game_over(chat_id, update, game_info, win):
     logger.info("game over")
-    redis.set(GAME_RUNNING_KEY, False)
+    redis.delete(GAME_RUNNING_KEY.format(chat_id))
     redis.delete(TRIED_USERS_KEY.format(chat_id))
     if not win:
-        update.message.reply_text("Right answer:{title}, {artist}, {album}.".format(**game_info['answer']))
+        update.message.reply_text(messages.game_over_lose.format(**game_info['answer']),
+                                  reply_markup=ReplyKeyboardRemove())
+    else:
+        update.message.reply_text(messages.game_over_win.format(**game_info['answer']),
+                                  reply_markup=ReplyKeyboardRemove())
+
+
 
 def start(bot, update):
     logger.info(update.message)
@@ -83,28 +89,27 @@ def try_one_guess(bot, update):
     chat_id = update.message.chat_id
     user_first_name = update.message.from_user.first_name
     logger.info("New try: {}, from: {}".format(update.message.text, user_first_name))
+    # check if game is running
+    logger.info("Game running info: {}".format(game_is_running(chat_id)))
     if not game_is_running(chat_id):
         update.message.reply_text(messages.game_not_running)
-    answer = update.message.text
+    # check if user has tried
     user = update.message.from_user
     if user.id in get_tried_users(chat_id):
         update.message.reply_text(messages.you_are_tried.format(user_first_name))
         return
     redis.lpush(TRIED_USERS_KEY.format(chat_id), user.id)
+    # check if answer is right
+    answer = update.message.text
     game_info = json.loads(redis.get(GAME_INFO_KEY.format(chat_id)).decode('utf-8'))
     if answer == game_info['answer']['title'][0]:
         update.message.reply_text(messages.answer_right.format(user_first_name),
-                reply_markup=ReplyKeyboardRemove())
+                                  reply_markup=ReplyKeyboardRemove())
         game_over(chat_id, update, game_info, True)
     else:
         update.message.reply_text(messages.answer_wrong.format(user_first_name))
         if game_info['type'] == Chat.PRIVATE:
             game_over(chat_id, update, game_info, False)
-        else:
-            logger.info("game info: {}".format(game_info['type']))
-            logger.info(Chat.PRIVATE)
-    logger.debug('fame_info type: {}, current type {}'.format(game_info['type'], Chat.PRIVATE))
-    logger.debug('try one guess done!')
 
 
 def setup_handler(dp):
