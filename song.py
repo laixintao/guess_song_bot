@@ -41,6 +41,7 @@ def get_random_choices(right_answer):
         if song not in choices:
             choices.append(song)
     logger.info(choices)
+    random.shuffle(choices)
     return choices
 
 if __name__ == '__main__':

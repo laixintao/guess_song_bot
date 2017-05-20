@@ -47,6 +47,9 @@ def game_over(chat_id, update, win):
 
 def set_game_over(bot, update):
     chat_id = update.message.chat_id
+    if not game_is_running(chat_id):
+        update.messages.reply_text(messages.game_not_running)
+        return
     game_over(chat_id, update, False)
 
 
@@ -58,11 +61,13 @@ def start(bot, update):
 @log_exception
 def new_game(bot, update):
     chat_id = update.message.chat_id
+    if game_is_running(chat_id):
+        update.message.reply_text(messages.game_already_running)
+        return
+
     set_game_running(chat_id)
-    logger.info(update.message)
     new_song = get_one_song()
     choices = get_random_choices(new_song['title'])
-    random.shuffle(choices)
     game_info = {
         'chat_id': chat_id,
         'db': 6,
@@ -74,6 +79,7 @@ def new_game(bot, update):
     update.message.reply_text(messages.new_game,
                               reply_markup=ReplyKeyboardMarkup(choices,
                                                                on_time_keyboard=True))
+                              
     with open(new_song['piece_path'], 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
         update.message.reply_audio(piece_file)
