@@ -12,7 +12,7 @@ from telegram.ext import (Updater, CommandHandler, MessageHandler, Filters, Rege
 import config_log
 import messages
 from song import get_random_choices, get_one_song
-from utils import mongo, log_exception
+from utils import mongo, log_exception, get_token
 from utils import redis_instance as redis
 from tasks import  send_message
 
@@ -133,20 +133,6 @@ def setup_handler(dp):
     dp.add_handler(CommandHandler('game_over', set_game_over))
     dp.add_handler(MessageHandler(Filters.text, try_one_guess))
 
-
-def set_token():
-    logger.info("Get token from token.txt")
-    with open('token.txt') as token_file:
-        token = token_file.read().strip()
-        redis.set(BOT_TOKEN_KEY, token)
-    return token
-
-
-def get_token():
-    token = redis.get(BOT_TOKEN_KEY)
-    if not token:
-        token = set_token()
-    return token
 
 def main():
     token = get_token()

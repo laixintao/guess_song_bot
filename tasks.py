@@ -5,7 +5,7 @@
 from __future__ import unicode_literals
 from telegram.bot import Bot
 from celery import Celery
-from bot import get_token
+from utils import get_token
 
 app = Celery('guess_song_bot', broker='redis://localhost')
 
