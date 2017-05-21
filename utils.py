@@ -38,13 +38,12 @@ def set_token():
     logger.info("Get token from token.txt")
     with open('token.txt') as token_file:
         token = token_file.read().strip()
-        redis.set(BOT_TOKEN_KEY, token)
+        redis_instance.set(BOT_TOKEN_KEY, token)
     return token
 
 
 def get_token():
-    token = redis.get(BOT_TOKEN_KEY)
+    token = redis_instance.get(BOT_TOKEN_KEY)
     if not token:
         token = set_token()
     return token
-
