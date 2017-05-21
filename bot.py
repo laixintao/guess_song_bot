@@ -81,6 +81,7 @@ def new_game(bot, update):
                               ReplyKeyboardMarkup(choices, on_time_keyboard=True)),
                              countdown=15)
 
+    logger.debug("Async message sent")
     with open(new_song['piece_path'], 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
         update.message.reply_text(messages.new_game)
@@ -136,6 +137,7 @@ def setup_handler(dp):
 
 def main():
     token = get_token()
+    logger.info("get token: {}".format(token))
     updater = Updater(token)
     dp = updater.dispatcher
     setup_handler(dp)
