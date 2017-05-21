@@ -14,7 +14,7 @@ import messages
 from song import get_random_choices, get_one_song
 from utils import mongo, log_exception, get_token
 from utils import redis_instance as redis
-from tasks import  send_message
+from tasks import  send_message, send_audio
 
 
 logger = logging.getLogger(__name__)
@@ -83,8 +83,8 @@ def new_game(bot, update):
     logger.debug("Async message sent")
     with open(new_song['piece_path'], 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
-        update.message.reply_text(messages.new_game)
-        update.message.reply_audio(piece_file)
+        send_message(chat_id, messages.new_game)
+        send_audio(chat_id, piece_file)
 
 
 def test_send_song(bot, update):
@@ -117,8 +117,6 @@ def try_one_guess(bot, update):
     answer = update.message.text
     game_info = json.loads(redis.get(GAME_INFO_KEY.format(chat_id)).decode('utf-8'))
     if answer == game_info['answer']['title'][0]:
-        update.message.reply_text(messages.answer_right.format(user_first_name),
-                                  reply_markup=ReplyKeyboardRemove())
         game_over(chat_id, update, True, user_first_name)
     else:
         update.message.reply_text(messages.answer_wrong.format(user_first_name))
