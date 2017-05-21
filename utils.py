@@ -47,4 +47,4 @@ def get_token():
     token = redis_instance.get(BOT_TOKEN_KEY)
     if not token:
         token = set_token()
-    return str(token)
+    return token.decode('utf-8')
