@@ -77,6 +77,9 @@ def new_game(bot, update):
         'answer': new_song}
     redis.set(GAME_INFO_KEY.format(chat_id), json.dumps(game_info))
     logger.debug("Set {} to {}".format(GAME_INFO_KEY.format(chat_id), game_info))
+    send_message.apply_async((chat_id, messages.guess_start,
+                              ReplyKeyboardMarkup(choices, on_time_keyboard=True)),
+                             countdown=15)
 
     logger.debug("Async message sent")
     with open(new_song['piece_path'], 'rb') as piece_file:
