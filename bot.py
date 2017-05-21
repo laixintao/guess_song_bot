@@ -33,7 +33,7 @@ def set_game_running(chat_id):
 
 
 @log_exception
-def game_over(chat_id, update, win):
+def game_over(chat_id, update, win, winner=''):
     game_info = json.loads(redis.get(GAME_INFO_KEY.format(chat_id)).decode('utf-8'))
     logger.info("game over")
     redis.delete(GAME_RUNNING_KEY.format(chat_id))
@@ -42,7 +42,7 @@ def game_over(chat_id, update, win):
         update.message.reply_text(messages.game_over_lose.format(**game_info['answer']),
                                   reply_markup=ReplyKeyboardRemove())
     else:
-        update.message.reply_text(messages.game_over_win.format(**game_info['answer']),
+        update.message.reply_text(messages.game_over_win.format(winner, **game_info['answer']),
                                   reply_markup=ReplyKeyboardRemove())
 
 
@@ -119,7 +119,7 @@ def try_one_guess(bot, update):
     if answer == game_info['answer']['title'][0]:
         update.message.reply_text(messages.answer_right.format(user_first_name),
                                   reply_markup=ReplyKeyboardRemove())
-        game_over(chat_id, update, True)
+        game_over(chat_id, update, True, user_first_name)
     else:
         update.message.reply_text(messages.answer_wrong.format(user_first_name))
         if game_info['type'] == Chat.PRIVATE:
