@@ -4,7 +4,7 @@
 "Conse messages"
 
 start_message = """使用 /new_game 开始下一轮游戏。"""
-new_game = """新游戏开始！猜猜看这首歌是什么名字?(15s之后出现选项）"""
+new_game = """新游戏开始！正在生成题目...正在上传音乐片段...15s之后发布选项..."""
 guess_start = """听过这首歌吗？现在可以根据键盘的选项作答了!"""
 game_not_running = """目前没有游戏正在进行，使用 /new_game 开启一个新游戏!"""
 game_already_running = """当前游戏正在进行，不能开启新的游戏。"""

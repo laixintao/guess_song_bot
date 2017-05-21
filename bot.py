@@ -83,7 +83,8 @@ def new_game(bot, update):
 
     with open(new_song['piece_path'], 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
-        update.message.reply_audio(piece_file, messages.new_game)
+        update.message.reply_text(messages.new_game)
+        update.message.reply_audio(piece_file)
 
 
 def test_send_song(bot, update):
