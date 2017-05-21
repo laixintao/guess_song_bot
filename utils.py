@@ -9,6 +9,7 @@ import config_log
 
 
 logger = logging.getLogger(__name__)
+BOT_TOKEN_KEY = 'guess_song_bot:bot:bot-token'
 
 def get_redis():
     """return a redis instance"""

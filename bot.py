@@ -22,7 +22,6 @@ message_base = mongo['telegram']['messages']
 GAME_RUNNING_KEY = 'guess_song_bot:bot:chat-{}:game_is_running'
 TRIED_USERS_KEY = 'guess_song_bot:bot:chat-{}:tried_users'
 GAME_INFO_KEY = 'guess_song_bot:bot:chat-{}:game_info'
-BOT_TOKEN_KEY = 'guess_song_bot:bot:bot-token'
 
 
 def game_is_running(chat_id):
