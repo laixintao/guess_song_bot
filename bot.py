@@ -14,6 +14,7 @@ import messages
 from song import get_random_choices, get_one_song
 from utils import mongo, log_exception
 from utils import redis_instance as redis
+from tasks import  send_message
 
 
 logger = logging.getLogger(__name__)
@@ -21,6 +22,7 @@ message_base = mongo['telegram']['messages']
 GAME_RUNNING_KEY = 'guess_song_bot:bot:chat-{}:game_is_running'
 TRIED_USERS_KEY = 'guess_song_bot:bot:chat-{}:tried_users'
 GAME_INFO_KEY = 'guess_song_bot:bot:chat-{}:game_info'
+BOT_TOKEN_KEY = 'guess_song_bot:bot:bot-token'
 
 
 def game_is_running(chat_id):
@@ -76,13 +78,13 @@ def new_game(bot, update):
         'answer': new_song}
     redis.set(GAME_INFO_KEY.format(chat_id), json.dumps(game_info))
     logger.debug("Set {} to {}".format(GAME_INFO_KEY.format(chat_id), game_info))
-    update.message.reply_text(messages.new_game,
-                              reply_markup=ReplyKeyboardMarkup(choices,
-                                                               on_time_keyboard=True))
-                              
+    send_message.apply_async((chat_id, messages.guess_start,
+                              ReplyKeyboardMarkup(choices, on_time_keyboard=True)),
+                             countdown=15)
+
     with open(new_song['piece_path'], 'rb') as piece_file:
         logger.debug("Sending song piece: {}".format(new_song['piece_path']))
-        update.message.reply_audio(piece_file)
+        update.message.reply_audio(piece_file, messages.new_game)
 
 
 def test_send_song(bot, update):
@@ -132,11 +134,23 @@ def setup_handler(dp):
     dp.add_handler(MessageHandler(Filters.text, try_one_guess))
 
 
-def main():
+def set_token():
+    logger.info("Get token from token.txt")
     with open('token.txt') as token_file:
         token = token_file.read().strip()
-    updater = Updater(token)
+        redis.set(BOT_TOKEN_KEY, token)
+    return token
 
+
+def get_token():
+    token = redis.get(BOT_TOKEN_KEY)
+    if not token:
+        token = set_token()
+    return token
+
+def main():
+    token = get_token()
+    updater = Updater(token)
     dp = updater.dispatcher
     setup_handler(dp)
     updater.start_polling()
