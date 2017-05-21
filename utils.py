@@ -13,7 +13,7 @@ BOT_TOKEN_KEY = 'guess_song_bot:bot:bot-token'
 
 def get_redis():
     """return a redis instance"""
-    return redis.Redis()
+    return str(redis.Redis())
 
 
 def get_mongo():
