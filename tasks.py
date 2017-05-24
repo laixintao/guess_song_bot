@@ -27,4 +27,4 @@ def send_audio(chat_id, audio, key_board='remove', key_board_choices=None):
     elif key_board == 'choice':
         key_board = ReplyKeyboardMarkup(key_board_choices, on_time_keyboard=True)
     bot = Bot(get_token())
-    bot.send_message(chat_id, audio, reply_markup=key_board)
+    bot.send_audio(chat_id, audio, reply_markup=key_board)
