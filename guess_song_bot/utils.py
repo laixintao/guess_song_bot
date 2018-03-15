@@ -21,17 +21,15 @@ s3 = Minio('nyc3.digitaloceanspaces.com',
 song_name_re = re.compile(r"song-piece-database/(.*) - (.*).mp3")
 
 
-def list_songs():
+def read_bucket():
     """List all songs' name from bucket"""
     songs = s3.list_objects(BUCKET, "song-piece-database/", False)
     uniques_songs = []
+    objects = []
     for song in songs:
         song_name = song.object_name
+        objects.append(song_name)
         artist, title = song_name_re.match(song_name).groups()
         if title not in uniques_songs:
             uniques_songs.append(title)
-    return uniques_songs
-
-
-if __name__ == '__main__':
-    print(list_songs())
+    return uniques_songs, objects
