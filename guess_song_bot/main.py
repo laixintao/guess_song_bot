@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import json
 import logging
 import random
 import asyncio
@@ -27,7 +28,6 @@ class Game:
     4. over
     """
     async def new(self):
-        self.status = "start"
         self.right_song = await self.random_choice_song()
         self.piece = await self.random_piece()
         self.choices = await self.get_random_choices()
@@ -35,13 +35,6 @@ class Game:
         self.object_share_link = BUCKET_PREFIX + self.piece
         return self
 
-
-    def guess(self, username, choice):
-        if choice == self.right_answer:
-            self.status = "over"
-            return True
-        else:
-            self.tried_users.append(username)
 
     async def random_choice_song(self):
         random_one = random.randrange(len(songs))
@@ -66,18 +59,15 @@ class Game:
 
 
 def send_choices_callback(chat, game):
-    logger.info("upload_song, chat: {}, game: {}".format(chat, game))
-    chat.send_text(messages.guess_start)
-
-
-@bot.command("whoami")
-def whoami(chat, match):
-    return chat.reply(chat.sender["id"])
-
-
-@bot.command("song")
-def send_song_link(chat, match):
-    return chat.send_audio("https://telegram-bot.nyc3.digitaloceanspaces.com/song-piece-database/The%20Cardigans%20-%20Love%20Fool.mp3.mp3---(100000:110000)")
+    logger.info("send choices, chat: {}, game: {}".format(chat, game))
+    markup = {
+        'keyboard': [
+            [{'type': 'KeyboardButton',
+              'text': choice.title
+            }] for choice in game.choices],
+        'one_time_keyboard': True,
+        }
+    chat.send_text(messages.guess_start, reply_markup=json.dumps(markup))
 
 
 @bot.command("start")
@@ -91,10 +81,58 @@ async def start_new_game(chat, match):
     games[chat.id] = new_game
     logger.debug(games)
     logger.info("start to send audio link: {}".format(new_game.object_share_link))
+
     await chat.send_audio(new_game.object_share_link)
 
     send_choices = partial(send_choices_callback, chat, new_game)
     loop.call_later(3, send_choices)
+
+
+@bot.command("gameover")
+async def game_over(chat, match):
+    logger.info("/gameover command")
+    if chat.id not in games:
+        await chat.reply(messages.game_not_running)
+        return
+    current_game = games[chat.id]
+    await chat.reply(messages.game_over_lose.format(current_game.right_song.title,
+                                                    current_game.right_song.artist))
+    games.pop(chat.id)
+
+
+@bot.default
+async def guess(chat, cq):
+    """
+    cq like this:
+    {'message_id': 1250, 'from': {'id': 242165025, 'is_bot': False, 'first_name': 'caster', 'last_name': 'Le', 'username': 'untakename', 'language_code': 'zh-Hans-CN'}, 'chat': {'id': 242165025, 'first_name': 'caster', 'last_name': 'Le', 'username': 'untakename', 'type': 'private'}, 'date': 1521185990, 'text': 'Sleep, Baby, Sleep'}
+    """
+    logger.info("received message: {}".format(cq))
+    if chat.id not in games:
+        await chat.reply(messages.game_not_running)
+        return
+
+    current_game = games[chat.id]
+    display_name = "{} {}".format(cq['from']['first_name'], cq['from']['last_name'])
+    username = cq['from']['username']
+
+    if username in current_game.tried_users:
+        result = messages.you_are_tried.format(display_name)
+        await chat.reply(result)
+        return
+
+    answer_text = cq['text']
+    current_game.tried_users.append(username)
+
+    if current_game.right_song.title == answer_text:
+        result = messages.game_over_win.format(display_name,
+                                               current_game.right_song.title,
+                                               current_game.right_song.artist)
+        await chat.reply(result)  # TODO no markup
+        games.pop(chat.id)
+    else:
+        result = messages.answer_wrong.format(display_name)
+        await chat.reply(result)
+        current_game.tried_users.append(username)
 
 
 def run_production():
