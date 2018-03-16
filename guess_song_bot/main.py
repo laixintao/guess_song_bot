@@ -12,7 +12,7 @@ from aiotg import Bot
 from guess_song_bot import messages
 from guess_song_bot.utils import read_bucket, s3, BUCKET, BUCKET_PREFIX
 
-bot = Bot(os.environ["API_TOKEN"])
+bot = Bot(os.environ["API_TOKEN"], default_in_groups=True)
 games = {}  # chat.id: Game
 logger = logging.getLogger(__name__)
 songs = read_bucket()
@@ -70,7 +70,7 @@ def send_choices_callback(chat, game):
     chat.send_text(messages.guess_start, reply_markup=json.dumps(markup))
 
 
-@bot.command("start")
+@bot.command(r"^/start")
 async def start_new_game(chat, match):
     if chat.id in games:
         chat.reply(messages.game_already_running)
@@ -88,7 +88,7 @@ async def start_new_game(chat, match):
     loop.call_later(3, send_choices)
 
 
-@bot.command("gameover")
+@bot.command(r"^/gameover")
 async def game_over(chat, match):
     logger.info("/gameover command")
     if chat.id not in games:
