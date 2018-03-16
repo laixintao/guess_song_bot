@@ -3,5 +3,4 @@
 # brew install libav --with-libvorbis --with-sdl --with-theora
 # brew install taglib
 pytaglib
-
 pydub
