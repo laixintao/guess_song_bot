@@ -2,6 +2,7 @@
 
 from distutils.core import setup
 
+
 with open("requirements.txt", "r") as requirements_file:
     requirements = requirements_file.readlines()
 
@@ -15,6 +16,7 @@ setup(
     entry_points={
         'console_scripts': [
             'cut_song = guess_song_bot.split_mp3:main'
+            'bot_run = guess_song_bot.main:run_production'
         ]
     },
     packages=['guess_song_bot'],
