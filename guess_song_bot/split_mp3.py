@@ -7,13 +7,14 @@ from io import BytesIO
 from pathlib import Path
 import logging
 import concurrent.futures
+import uuid
 
 from pydub import AudioSegment
 import taglib
 
-from guess_song_bot.utils import s3, BUCKET
+from guess_song_bot.utils import s3, BUCKET, read_bucket
 
-LENGTH_PER_PIECE = 19 * 1000
+LENGTH_PER_PIECE = 20 * 1000
 SONG_FOLDER = "song-piece-database"
 
 logger = logging.getLogger(__name__)
@@ -24,9 +25,15 @@ def parse_mp3(song):
     mp3_song = AudioSegment.from_mp3(str(song.absolute()))
     song_info = {}
     filename = song.name
-    song_info = str(taglib.File(str(song.absolute())).tags)
-    logger.info("Song: {}, info: {}".format(filename, song_info))
-    print("start to upload: {}".format(filename))
+    song_info = taglib.File(str(song.absolute())).tags
+    logger.info("tags: {}".format(song_info))
+    meta_info = {
+        'x-amz-meta-album': song_info['ALBUM'][0],
+        'x-amz-meta-artist': song_info['ARTIST'][0],
+        'x-amz-meta-title': song_info['TITLE'][0],
+        'x-amz-acl': 'public-read',
+    }
+    logger.info("song meta info: {}".format(meta_info))
 
     for index in range(0, len(mp3_song), LENGTH_PER_PIECE):
         start = index
@@ -34,26 +41,25 @@ def parse_mp3(song):
         if end > len(mp3_song):
             break
         piece = mp3_song[start: end]
-        out_filename = "{}/{}---({}:{})".format(SONG_FOLDER, filename, start, end)
+        out_filename = str(uuid.uuid4().int)
         raw_data = BytesIO()
         piece.export(raw_data)
-        s3.put_object(BUCKET, out_filename, raw_data,
-                      len(raw_data.getbuffer()), 'audio/mpeg',
-                      metadata={
-                          'x-amz-meta-tag': song_info,
-                          'x-amz-acl': 'public-read',
-                      })
-    song_prefix = name_re.match(filename).group(1)
-    new_abs_name = song.parent / "{}-DONE.mp3".format(song_prefix)
-    song.rename(str(new_abs_name))
+        try:
+            upload_result = s3.put_object(BUCKET, out_filename, raw_data,
+                                          len(raw_data.getbuffer()), 'audio/mpeg', metadata=meta_info)
+        except UnicodeEncodeError:
+            logger.error("Can not upload: {} {}".format(filename, index))
+        else:
+            logger.info("Upload finished: {}".format(upload_result))
 
 
 def get_all_mp3_files(song_path):
-    files = [f for f in song_path.iterdir() if not f.name.endswith("DONE.mp3")]
+    files = [f for f in song_path.iterdir()]
     return files
 
 
 def main():
+    exists_songs = read_bucket()
     path = Path(sys.argv[1])
     logger.info("Path: {}".format(path))
     songs = get_all_mp3_files(path)
@@ -61,6 +67,14 @@ def main():
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     for song in songs:
+        is_exist = False
+        for exist in exists_songs:
+            if exist.title in str(song) and exist.artist in str(song):
+                is_exist = True
+                break
+        if is_exist:
+            logger.info("{} already exists.".format(song))
+            continue
         executor.submit(parse_mp3, song)
 
 
